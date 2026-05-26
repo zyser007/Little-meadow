@@ -8,6 +8,26 @@
     />
     <meta name="theme-color" content="#7cc36a" />
     <title>Little Meadow</title>
+    <script>
+      // Surface boot errors on screen (handy on mobile where the console isn't accessible).
+      (function () {
+        function show(msg) {
+          var el = document.getElementById("boot-error") || document.createElement("div");
+          el.id = "boot-error";
+          el.style.cssText =
+            "position:fixed;inset:0;z-index:99999;padding:16px;margin:0;" +
+            "font:13px/1.4 monospace;color:#a11;background:#fff;white-space:pre-wrap;overflow:auto";
+          el.textContent = "Little Meadow failed to start:\n\n" + msg;
+          (document.body || document.documentElement).appendChild(el);
+        }
+        window.addEventListener("error", function (e) {
+          show((e.message || "error") + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          show("Promise: " + ((e.reason && e.reason.message) || e.reason));
+        });
+      })();
+    </script>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
