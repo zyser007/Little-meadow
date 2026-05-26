@@ -99,6 +99,8 @@ export class World {
 
     // Pre-placed buildings.
     this.setBuilding(1, 1, "house");
+    this.setBuilding(4, 1, "coop");
+    this.setBuilding(6, 1, "barn");
     this.setBuilding(9, 1, "shop");
 
     // A storage chest beside the home.

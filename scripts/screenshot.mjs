@@ -74,5 +74,12 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await shot("07-chest");
 
+await page.evaluate(() => {
+  window.LM.closePanel();
+  window.LM.openAnimals("coop");
+});
+await page.waitForTimeout(400);
+await shot("08-coop");
+
 await browser.close();
 console.log("done");

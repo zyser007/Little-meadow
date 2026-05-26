@@ -7,12 +7,31 @@ import { Player } from "../game/Player";
 import { gridToScreen } from "../game/iso";
 import { tintFor, skyColor } from "../game/time";
 import type { AssetMap } from "./assets";
-import { drawTerrainTile, drawCrop, drawBuilding, drawPlayer, drawTileHighlight, drawTree, drawRock, drawChest } from "./sprites";
+import {
+  drawTerrainTile,
+  drawCrop,
+  drawBuilding,
+  drawPlayer,
+  drawTileHighlight,
+  drawTree,
+  drawRock,
+  drawChest,
+  drawAnimal,
+} from "./sprites";
 
 export interface Highlight {
   col: number;
   row: number;
   color: string;
+}
+
+export interface AnimalRender {
+  x: number;
+  y: number;
+  defId: string;
+  color: string;
+  hasProduce: boolean;
+  depth: number;
 }
 
 interface Entity {
@@ -47,7 +66,14 @@ export class Renderer {
     this.canvas.height = Math.round(this.viewH * this.dpr);
   }
 
-  render(world: World, player: Player, timeMin: number, highlight: Highlight | null, time: number): void {
+  render(
+    world: World,
+    player: Player,
+    timeMin: number,
+    highlight: Highlight | null,
+    time: number,
+    animals: AnimalRender[] = [],
+  ): void {
     const { ctx } = this;
 
     // sky backdrop
@@ -107,6 +133,9 @@ export class Renderer {
       depth: player.fcol + player.frow + 0.2,
       draw: () => drawPlayer(ctx, ps.x, ps.y, player.facing, player.moving, time),
     });
+    for (const a of animals) {
+      entities.push({ depth: a.depth, draw: () => drawAnimal(ctx, a.x, a.y, a.defId, a.color, a.hasProduce) });
+    }
     entities.sort((a, b) => a.depth - b.depth);
     for (const e of entities) e.draw();
 

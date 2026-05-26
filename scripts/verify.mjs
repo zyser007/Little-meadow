@@ -105,7 +105,24 @@ await page.waitForFunction(() => !!window.LM, null, { timeout: 15000 });
 const persisted = await page.evaluate(() => ({
   day: window.LM.game.day,
   turnip: window.LM.game.count("turnip"),
+  animals: window.LM.game.animals.length,
 }));
+
+// animal loop: feed -> sleep produces -> collect
+const animal = await page.evaluate(() => {
+  const { game, sleep, feedAnimal, collectAnimal } = window.LM;
+  let a = game.animals[0];
+  if (!a) a = game.addAnimal("chicken");
+  a.fed = false;
+  a.hasProduce = false;
+  const fed = feedAnimal(a).ok && a.fed === true;
+  sleep();
+  const produced = a.hasProduce === true && a.fed === false;
+  const eggBefore = game.count("egg");
+  const res = collectAnimal(a);
+  const collected = res.ok && game.count("egg") === eggBefore + 1 && a.hasProduce === false;
+  return { fed, produced, collected };
+});
 
 await browser.close();
 
@@ -126,6 +143,10 @@ const checks = [
   ["got stone from rock", result.stoneGained >= 1],
   ["stored item in chest", result.stored === true],
   ["took item from chest", result.took === true],
+  ["save/load kept animals", persisted.animals >= 1],
+  ["fed an animal", animal.fed === true],
+  ["animal produced overnight", animal.produced === true],
+  ["collected animal produce", animal.collected === true],
 ];
 
 let ok = true;

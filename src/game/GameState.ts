@@ -2,11 +2,14 @@
 // calendar/clock and the active tool/seed selection. World + Player are owned by the controller.
 
 import type { ToolId } from "../data/tools";
+import type { Animal } from "../data/animals";
 
 export class GameState {
   gold = 150;
   inventory: Record<string, number> = {};
   storage: Record<string, number> = {}; // contents of the chest
+  animals: Animal[] = [];
+  nextAnimalUid = 1;
   day = 1;
   timeMinutes = 6 * 60; // 06:00
   selectedTool: ToolId = "hand";
@@ -54,10 +57,21 @@ export class GameState {
     return true;
   }
 
+  addAnimal(defId: string): Animal {
+    const a: Animal = { uid: this.nextAnimalUid++, defId, fed: false, hasProduce: false };
+    this.animals.push(a);
+    return a;
+  }
+
   resetNewGame(): void {
     this.gold = 150;
     this.inventory = { turnip_seed: 5, carrot_seed: 3 };
     this.storage = {};
+    this.animals = [];
+    this.nextAnimalUid = 1;
+    // a starter chicken with an egg ready to collect on day one
+    this.addAnimal("chicken");
+    this.animals[0].hasProduce = true;
     this.day = 1;
     this.timeMinutes = 6 * 60;
     this.selectedTool = "hand";

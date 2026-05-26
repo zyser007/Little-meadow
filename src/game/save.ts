@@ -4,6 +4,7 @@ import { game } from "./GameState";
 import type { World, SerializedTile } from "./World";
 import type { Player, Facing } from "./Player";
 import type { ToolId } from "../data/tools";
+import type { Animal } from "../data/animals";
 
 const KEY = "little-meadow-save-v1";
 
@@ -12,6 +13,8 @@ interface SaveData {
   gold: number;
   inventory: Record<string, number>;
   storage: Record<string, number>;
+  animals: Animal[];
+  nextAnimalUid: number;
   day: number;
   timeMinutes: number;
   selectedTool: ToolId;
@@ -26,6 +29,8 @@ export function saveGame(world: World, player: Player): void {
     gold: game.gold,
     inventory: game.inventory,
     storage: game.storage,
+    animals: game.animals,
+    nextAnimalUid: game.nextAnimalUid,
     day: game.day,
     timeMinutes: game.timeMinutes,
     selectedTool: game.selectedTool,
@@ -53,6 +58,8 @@ export function loadGame(world: World, player: Player): boolean {
     game.gold = data.gold ?? 150;
     game.inventory = data.inventory ?? {};
     game.storage = data.storage ?? {};
+    game.animals = data.animals ?? [];
+    game.nextAnimalUid = data.nextAnimalUid ?? game.animals.length + 1;
     game.day = data.day ?? 1;
     game.timeMinutes = data.timeMinutes ?? 6 * 60;
     game.selectedTool = data.selectedTool ?? "hand";

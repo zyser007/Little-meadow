@@ -358,6 +358,119 @@ export function drawChest(ctx: CanvasRenderingContext2D, cx: number, cy: number)
   ctx.fill();
 }
 
+export function drawAnimal(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  id: string,
+  color: string,
+  hasProduce: boolean,
+): void {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + 4, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (id === "chicken" || id === "duck") {
+    ctx.strokeStyle = "#e0962f";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 2, y + 2);
+    ctx.lineTo(x - 2, y + 5);
+    ctx.moveTo(x + 2, y + 2);
+    ctx.lineTo(x + 2, y + 5);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(0,0,0,0.15)";
+    ctx.beginPath();
+    ctx.ellipse(x, y - 3, 8, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + 6, y - 9, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e8923b";
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y - 9);
+    ctx.lineTo(x + 14, y - 8);
+    ctx.lineTo(x + 10, y - 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#3a2a1c";
+    ctx.beginPath();
+    ctx.arc(x + 7, y - 10, 1, 0, Math.PI * 2);
+    ctx.fill();
+    if (id === "chicken") {
+      ctx.fillStyle = "#d8463a";
+      ctx.beginPath();
+      ctx.arc(x + 5, y - 13, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    ctx.strokeStyle = "#6e4a32";
+    ctx.lineWidth = 2;
+    for (const lx of [-7, -3, 3, 7]) {
+      ctx.beginPath();
+      ctx.moveTo(x + lx, y);
+      ctx.lineTo(x + lx, y + 5);
+      ctx.stroke();
+    }
+    ctx.fillStyle = color;
+    if (id === "sheep") {
+      for (const [bx, by, br] of [
+        [-7, -6, 7],
+        [0, -9, 8],
+        [7, -6, 7],
+        [0, -3, 8],
+      ]) {
+        ctx.beginPath();
+        ctx.arc(x + bx, y + by, br, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.beginPath();
+      ctx.ellipse(x, y - 6, 12, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.fillStyle = id === "sheep" ? "#4a3a30" : color;
+    ctx.strokeStyle = "rgba(0,0,0,0.15)";
+    ctx.beginPath();
+    ctx.arc(x + 12, y - 9, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    if (id === "cow") {
+      ctx.fillStyle = "#7a5236";
+      ctx.beginPath();
+      ctx.arc(x - 3, y - 7, 3, 0, Math.PI * 2);
+      ctx.arc(x + 4, y - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#3a2a1c";
+    ctx.beginPath();
+    ctx.arc(x + 13, y - 10, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (hasProduce) {
+    ctx.fillStyle = "#fff7d6";
+    ctx.strokeStyle = "#caa05a";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y - 20, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e8943b";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("!", x, y - 19);
+    ctx.textAlign = "left";
+  }
+}
+
 function blob(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);

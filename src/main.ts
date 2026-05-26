@@ -8,20 +8,24 @@ import { Player } from "./game/Player";
 import { game } from "./game/GameState";
 import { loadGame, saveGame, clearSave } from "./game/save";
 import { MINUTES_PER_SECOND, WAKE_MINUTES, formatClock, phaseOf } from "./game/time";
-import { Renderer, type Highlight } from "./render/Renderer";
+import { gridToScreen } from "./game/iso";
+import { Renderer, type Highlight, type AnimalRender } from "./render/Renderer";
 import { loadAssets } from "./render/assets";
 import { InputManager } from "./input";
 import { tryTill, tryPlant, tryWater, tryHarvest, growCrops, stageLabel, type Result } from "./systems/farming";
 import { tryChop, tryMine } from "./systems/gathering";
+import { feedAnimal, collectAnimal, produceOvernight } from "./systems/animals";
 import { CROP_BY_ID, CROP_BY_SEED, CROPS, matureStage } from "./data/crops";
 import { ENABLED_TOOLS, TOOL_BY_ID, type ToolId } from "./data/tools";
 import { buildingDef } from "./data/buildings";
+import { ANIMAL_BY_ID, HOUSE_CAPACITY, animalsForHouse, type AnimalHouse } from "./data/animals";
 import { HUD } from "./ui/hud";
 import { Toast } from "./ui/dialogue";
 import { ActionBar } from "./ui/actionbar";
 import { Bag } from "./ui/bag";
 import { Shop } from "./ui/shop";
 import { Storage } from "./ui/storage";
+import { AnimalPanel } from "./ui/animals";
 
 async function main(): Promise<void> {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -66,6 +70,60 @@ async function main(): Promise<void> {
   function openStorage(): void {
     storage.refresh();
     openPanel(storage.el);
+  }
+
+  const animalPanel = new AnimalPanel(closePanel, {
+    feed: (a) => act(feedAnimal(a)),
+    collect: (a) => act(collectAnimal(a)),
+    feedAll: (house) => {
+      let n = 0;
+      for (const a of animalsForHouse(game.animals, house)) {
+        if (!a.fed && !a.hasProduce) {
+          a.fed = true;
+          n++;
+        }
+      }
+      if (n > 0) {
+        toast.show(`Fed ${n} animal${n > 1 ? "s" : ""}.`);
+        save();
+      }
+    },
+    collectAll: (house) => {
+      let n = 0;
+      for (const a of animalsForHouse(game.animals, house)) {
+        if (a.hasProduce) {
+          collectAnimal(a);
+          n++;
+        }
+      }
+      if (n > 0) {
+        toast.show(`Collected from ${n} animal${n > 1 ? "s" : ""}.`);
+        updateBar();
+        save();
+      } else {
+        toast.show("Nothing to collect.");
+      }
+    },
+    buy: (defId) => {
+      const def = ANIMAL_BY_ID[defId];
+      if (!def) return;
+      if (animalsForHouse(game.animals, def.house).length >= HOUSE_CAPACITY[def.house]) {
+        toast.show("This building is full.");
+        return;
+      }
+      if (!game.spendGold(def.cost)) {
+        toast.show("Not enough gold.");
+        return;
+      }
+      game.addAnimal(defId);
+      toast.show(`Bought a ${def.name.toLowerCase()}!`);
+      refreshHud();
+      save();
+    },
+  });
+  function openAnimals(house: AnimalHouse): void {
+    animalPanel.open(house);
+    openPanel(animalPanel.el);
   }
 
   const bar = new ActionBar(ui, {
@@ -165,9 +223,43 @@ async function main(): Promise<void> {
     } else if (def?.action === "shop") {
       shop.refresh();
       openPanel(shop.el);
+    } else if (def?.action === "animals") {
+      openAnimals(id as AnimalHouse);
     } else {
       toast.show(def?.name ?? "");
     }
+  }
+
+  // Cache coop/barn tiles so animals can be drawn standing beside them.
+  const houseTiles: Partial<Record<AnimalHouse, { col: number; row: number }>> = {};
+  function recomputeHouseTiles(): void {
+    houseTiles.coop = undefined;
+    houseTiles.barn = undefined;
+    world.forEach((t, c, r) => {
+      if (t.building === "coop") houseTiles.coop = { col: c, row: r };
+      if (t.building === "barn") houseTiles.barn = { col: c, row: r };
+    });
+  }
+  recomputeHouseTiles();
+
+  const ANIMAL_OFFSETS: Array<[number, number]> = [
+    [0, 1], [1, 1], [-1, 1], [0, 2], [1, 2], [-1, 2], [2, 1], [-2, 1],
+  ];
+  function computeAnimalRenders(): AnimalRender[] {
+    const out: AnimalRender[] = [];
+    for (const house of ["coop", "barn"] as AnimalHouse[]) {
+      const tile = houseTiles[house];
+      if (!tile) continue;
+      animalsForHouse(game.animals, house).forEach((a, i) => {
+        const [dc, dr] = ANIMAL_OFFSETS[i % ANIMAL_OFFSETS.length];
+        const gc = tile.col + dc;
+        const gr = tile.row + dr;
+        const s = gridToScreen(gc, gr);
+        const def = ANIMAL_BY_ID[a.defId];
+        out.push({ x: s.x, y: s.y, defId: a.defId, color: def ? def.color : "#fff", hasProduce: a.hasProduce, depth: gc + gr + 0.15 });
+      });
+    }
+    return out;
   }
 
   function resolveTap(col: number, row: number): void {
@@ -254,6 +346,7 @@ async function main(): Promise<void> {
 
   function sleep(): void {
     growCrops(world);
+    produceOvernight();
     game.day += 1;
     game.timeMinutes = WAKE_MINUTES;
     save();
@@ -297,6 +390,7 @@ async function main(): Promise<void> {
       player.col = player.fcol = 4;
       player.row = player.frow = 5;
       camera.fitToMap(world.cols, world.rows, renderer.viewW, renderer.viewH);
+      recomputeHouseTiles();
       save();
       updateBar();
       refreshHud();
@@ -309,8 +403,9 @@ async function main(): Promise<void> {
     hint.innerHTML =
       "Tap the ground to walk. <b>Hoe</b> tills grass, pick a <b>Seed</b> then tap soil to plant, " +
       "<b>Watering Can</b> waters. <b>Axe</b> chops trees for wood, <b>Pickaxe</b> breaks rocks for " +
-      "stone &amp; ore. Tap the <b>chest</b> to store items. Tap your <b>house</b> to sleep — watered " +
-      "crops grow overnight. Harvest ripe crops, then <b>sell</b> at the Shop. Long-press to clear a tile.";
+      "stone &amp; ore. Tap the <b>chest</b> to store items, or the <b>coop/barn</b> to feed animals and " +
+      "collect eggs, milk &amp; wool. Tap your <b>house</b> to sleep — watered crops grow and fed animals " +
+      "produce overnight. Harvest, then <b>sell</b> at the Shop. Long-press to clear a tile.";
 
     body.append(saveBtn, newBtn, hint);
     el.append(head, body);
@@ -338,7 +433,7 @@ async function main(): Promise<void> {
     game.timeMinutes += dt * MINUTES_PER_SECOND;
     player.update(dt);
     if (highlight && now > highlightUntil) highlight = null;
-    renderer.render(world, player, game.timeMinutes, highlight, now / 1000);
+    renderer.render(world, player, game.timeMinutes, highlight, now / 1000, computeAnimalRenders());
     hudAcc += dt;
     if (hudAcc > 0.2) {
       refreshHud();
@@ -371,6 +466,14 @@ async function main(): Promise<void> {
     game.addItem("iron", 2);
     game.addStore("wood", 4);
     game.addStore("carrot", 3);
+    // stock the coop + barn so the animals are visible
+    game.animals = [];
+    game.nextAnimalUid = 1;
+    ["chicken", "chicken", "duck", "cow", "sheep"].forEach((id) => game.addAnimal(id));
+    game.animals.forEach((a, i) => {
+      a.hasProduce = i % 2 === 0;
+      a.fed = i % 2 === 1;
+    });
     updateBar();
     refreshHud();
     save();
@@ -392,6 +495,9 @@ async function main(): Promise<void> {
       openPanel(bag.el);
     },
     openStorage,
+    openAnimals,
+    feedAnimal,
+    collectAnimal,
     openMenu,
     closePanel,
     demoSetup,
