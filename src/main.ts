@@ -12,6 +12,7 @@ import { Renderer, type Highlight } from "./render/Renderer";
 import { loadAssets } from "./render/assets";
 import { InputManager } from "./input";
 import { tryTill, tryPlant, tryWater, tryHarvest, growCrops, stageLabel, type Result } from "./systems/farming";
+import { tryChop, tryMine } from "./systems/gathering";
 import { CROP_BY_ID, CROP_BY_SEED, CROPS, matureStage } from "./data/crops";
 import { ENABLED_TOOLS, TOOL_BY_ID, type ToolId } from "./data/tools";
 import { buildingDef } from "./data/buildings";
@@ -20,6 +21,7 @@ import { Toast } from "./ui/dialogue";
 import { ActionBar } from "./ui/actionbar";
 import { Bag } from "./ui/bag";
 import { Shop } from "./ui/shop";
+import { Storage } from "./ui/storage";
 
 async function main(): Promise<void> {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -60,6 +62,11 @@ async function main(): Promise<void> {
 
   const bag = new Bag(closePanel);
   const shop = new Shop(closePanel, () => refreshHud(), (m) => toast.show(m));
+  const storage = new Storage(closePanel, () => save());
+  function openStorage(): void {
+    storage.refresh();
+    openPanel(storage.el);
+  }
 
   const bar = new ActionBar(ui, {
     onBag: () => {
@@ -168,6 +175,19 @@ async function main(): Promise<void> {
     if (!t) return;
     if (t.building) {
       buildingAction(t.building);
+      return;
+    }
+    if (t.obj) {
+      flash(col, row, "rgba(255,255,255,0.7)");
+      if (t.obj.kind === "chest") {
+        openStorage();
+      } else if (t.obj.kind === "tree") {
+        if (game.selectedTool === "axe") act(tryChop(world, col, row));
+        else toast.show("Use the Axe to chop this tree.");
+      } else if (t.obj.kind === "rock") {
+        if (game.selectedTool === "pickaxe") act(tryMine(world, col, row));
+        else toast.show("Use the Pickaxe to break this rock.");
+      }
       return;
     }
     flash(col, row, "rgba(255,255,255,0.7)");
@@ -288,8 +308,9 @@ async function main(): Promise<void> {
     hint.className = "hint";
     hint.innerHTML =
       "Tap the ground to walk. <b>Hoe</b> tills grass, pick a <b>Seed</b> then tap soil to plant, " +
-      "<b>Watering Can</b> waters. Tap your <b>house</b> to sleep — watered crops grow overnight. " +
-      "Harvest ripe crops by tapping them, then <b>sell</b> at the Shop. Long-press to clear a tile.";
+      "<b>Watering Can</b> waters. <b>Axe</b> chops trees for wood, <b>Pickaxe</b> breaks rocks for " +
+      "stone &amp; ore. Tap the <b>chest</b> to store items. Tap your <b>house</b> to sleep — watered " +
+      "crops grow overnight. Harvest ripe crops, then <b>sell</b> at the Shop. Long-press to clear a tile.";
 
     body.append(saveBtn, newBtn, hint);
     el.append(head, body);
@@ -345,6 +366,11 @@ async function main(): Promise<void> {
     player.col = player.fcol = 6;
     player.row = player.frow = 6;
     game.gold = 1250;
+    game.addItem("wood", 8);
+    game.addItem("stone", 5);
+    game.addItem("iron", 2);
+    game.addStore("wood", 4);
+    game.addStore("carrot", 3);
     updateBar();
     refreshHud();
     save();
@@ -365,6 +391,7 @@ async function main(): Promise<void> {
       bag.refresh();
       openPanel(bag.el);
     },
+    openStorage,
     openMenu,
     closePanel,
     demoSetup,

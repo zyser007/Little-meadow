@@ -55,9 +55,45 @@ const result = await page.evaluate(() => {
   out.harvested = game.count("turnip") - produceBefore;
   out.cropCleared = world.at(c, r).crop === null;
 
-  // sell roundtrip
-  const goldBefore = game.gold;
-  out.goldBefore = goldBefore;
+  // gathering: chop a tree to nothing
+  let tree = null;
+  world.forEach((t, tc, tr) => {
+    if (!tree && t.obj && t.obj.kind === "tree") tree = [tc, tr];
+  });
+  if (tree) {
+    game.selectedTool = "axe";
+    const woodBefore = game.count("wood");
+    let guard = 0;
+    while (world.at(tree[0], tree[1]).obj && guard++ < 12) resolveTap(tree[0], tree[1]);
+    out.treeGone = world.at(tree[0], tree[1]).obj === null;
+    out.woodGained = game.count("wood") - woodBefore;
+  }
+
+  // gathering: mine a rock to nothing
+  let rock = null;
+  world.forEach((t, rc, rr) => {
+    if (!rock && t.obj && t.obj.kind === "rock") rock = [rc, rr];
+  });
+  if (rock) {
+    game.selectedTool = "pickaxe";
+    const stoneBefore = game.count("stone");
+    let guard = 0;
+    while (world.at(rock[0], rock[1]).obj && guard++ < 12) resolveTap(rock[0], rock[1]);
+    out.rockGone = world.at(rock[0], rock[1]).obj === null;
+    out.stoneGained = game.count("stone") - stoneBefore;
+  }
+
+  // storage roundtrip (same move semantics as the chest panel)
+  if (game.count("wood") > 0) {
+    const w = game.count("wood");
+    game.removeItem("wood", 1);
+    game.addStore("wood", 1);
+    out.stored = game.countStore("wood") >= 1 && game.count("wood") === w - 1;
+    game.removeStore("wood", 1);
+    game.addItem("wood", 1);
+    out.took = game.count("wood") === w;
+  }
+
   out.cell = [c, r];
   return out;
 });
@@ -84,6 +120,12 @@ const checks = [
   ["crop cleared after harvest", result.cropCleared === true],
   ["save/load kept day", persisted.day === dayBeforeReload],
   ["save/load kept produce", persisted.turnip >= 1],
+  ["chopped tree away", result.treeGone === true],
+  ["got wood from tree", result.woodGained >= 2],
+  ["mined rock away", result.rockGone === true],
+  ["got stone from rock", result.stoneGained >= 1],
+  ["stored item in chest", result.stored === true],
+  ["took item from chest", result.took === true],
 ];
 
 let ok = true;

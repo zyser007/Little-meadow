@@ -11,6 +11,7 @@ interface SaveData {
   v: number;
   gold: number;
   inventory: Record<string, number>;
+  storage: Record<string, number>;
   day: number;
   timeMinutes: number;
   selectedTool: ToolId;
@@ -24,6 +25,7 @@ export function saveGame(world: World, player: Player): void {
     v: 1,
     gold: game.gold,
     inventory: game.inventory,
+    storage: game.storage,
     day: game.day,
     timeMinutes: game.timeMinutes,
     selectedTool: game.selectedTool,
@@ -50,6 +52,7 @@ export function loadGame(world: World, player: Player): boolean {
     const data = JSON.parse(raw) as SaveData;
     game.gold = data.gold ?? 150;
     game.inventory = data.inventory ?? {};
+    game.storage = data.storage ?? {};
     game.day = data.day ?? 1;
     game.timeMinutes = data.timeMinutes ?? 6 * 60;
     game.selectedTool = data.selectedTool ?? "hand";

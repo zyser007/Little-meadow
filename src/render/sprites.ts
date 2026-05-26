@@ -285,6 +285,85 @@ export function drawPlayer(
   }
 }
 
+export function drawTree(ctx: CanvasRenderingContext2D, cx: number, cy: number, variant: number): void {
+  const cherry = variant % 4 === 0;
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + HH - 2, 18, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // trunk
+  ctx.fillStyle = "#8a5a3b";
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, cx - 5, cy - 12, 10, 22, 3);
+  ctx.fill();
+  ctx.stroke();
+  // canopy
+  const leaf1 = cherry ? "#f4a9c4" : "#5aa64a";
+  const leaf2 = cherry ? "#f7c1d6" : "#76c265";
+  ctx.fillStyle = leaf1;
+  blob(ctx, cx - 11, cy - 22, 14);
+  blob(ctx, cx + 11, cy - 22, 14);
+  blob(ctx, cx, cy - 34, 17);
+  ctx.fillStyle = leaf2;
+  blob(ctx, cx - 4, cy - 30, 11);
+  blob(ctx, cx + 6, cy - 26, 9);
+}
+
+export function drawRock(ctx: CanvasRenderingContext2D, cx: number, cy: number, variant: number): void {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + HH - 4, 16, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.22)";
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = "#9aa0a6";
+  blob(ctx, cx - 6, cy - 2, 11);
+  blob(ctx, cx + 7, cy + 1, 9);
+  ctx.fillStyle = "#b6bcc2";
+  blob(ctx, cx, cy - 9, 10);
+  // a couple of facets
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  blob(ctx, cx - 2, cy - 11, 4);
+  if (variant % 3 === 0) {
+    ctx.fillStyle = "#cdb37a";
+    blob(ctx, cx + 5, cy - 2, 2.5);
+  }
+}
+
+export function drawChest(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + HH - 4, 16, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // body
+  ctx.fillStyle = "#9c6b3f";
+  ctx.strokeStyle = "#5e3a23";
+  ctx.lineWidth = 2;
+  roundRect(ctx, cx - 16, cy - 12, 32, 22, 3);
+  ctx.fill();
+  ctx.stroke();
+  // lid
+  ctx.fillStyle = "#b5824f";
+  roundRect(ctx, cx - 16, cy - 18, 32, 10, 4);
+  ctx.fill();
+  ctx.stroke();
+  // metal bands + lock
+  ctx.fillStyle = "#e8c24a";
+  ctx.fillRect(cx - 3, cy - 18, 6, 28);
+  ctx.strokeRect(cx - 3, cy - 18, 6, 28);
+  ctx.fillStyle = "#f6e7b8";
+  roundRect(ctx, cx - 3, cy - 9, 6, 6, 1);
+  ctx.fill();
+}
+
+function blob(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();

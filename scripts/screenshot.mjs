@@ -67,5 +67,12 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await shot("06-bag");
 
+await page.evaluate(() => {
+  window.LM.closePanel();
+  window.LM.openStorage();
+});
+await page.waitForTimeout(400);
+await shot("07-chest");
+
 await browser.close();
 console.log("done");

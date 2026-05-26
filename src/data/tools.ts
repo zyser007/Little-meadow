@@ -15,8 +15,8 @@ export const TOOLS: ToolDef[] = [
   { id: "hand", name: "Hand", short: "Hand", color: "#e8c9a0", enabled: true },
   { id: "hoe", name: "Hoe", short: "Hoe", color: "#b07a45", enabled: true },
   { id: "watering_can", name: "Watering Can", short: "Water", color: "#5fb4d6", enabled: true },
-  { id: "axe", name: "Axe", short: "Axe", color: "#9aa0a6", enabled: false },
-  { id: "pickaxe", name: "Pickaxe", short: "Pick", color: "#8a93a0", enabled: false },
+  { id: "axe", name: "Axe", short: "Axe", color: "#9aa0a6", enabled: true },
+  { id: "pickaxe", name: "Pickaxe", short: "Pick", color: "#8a93a0", enabled: true },
 ];
 
 export const ENABLED_TOOLS: ToolDef[] = TOOLS.filter((t) => t.enabled);

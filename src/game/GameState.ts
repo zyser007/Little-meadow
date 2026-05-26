@@ -6,6 +6,7 @@ import type { ToolId } from "../data/tools";
 export class GameState {
   gold = 150;
   inventory: Record<string, number> = {};
+  storage: Record<string, number> = {}; // contents of the chest
   day = 1;
   timeMinutes = 6 * 60; // 06:00
   selectedTool: ToolId = "hand";
@@ -27,6 +28,22 @@ export class GameState {
     return true;
   }
 
+  countStore(id: string): number {
+    return this.storage[id] ?? 0;
+  }
+
+  addStore(id: string, n = 1): void {
+    this.storage[id] = this.countStore(id) + n;
+  }
+
+  removeStore(id: string, n = 1): boolean {
+    if (this.countStore(id) < n) return false;
+    const left = this.countStore(id) - n;
+    if (left <= 0) delete this.storage[id];
+    else this.storage[id] = left;
+    return true;
+  }
+
   addGold(n: number): void {
     this.gold += n;
   }
@@ -40,6 +57,7 @@ export class GameState {
   resetNewGame(): void {
     this.gold = 150;
     this.inventory = { turnip_seed: 5, carrot_seed: 3 };
+    this.storage = {};
     this.day = 1;
     this.timeMinutes = 6 * 60;
     this.selectedTool = "hand";

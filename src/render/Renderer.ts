@@ -7,7 +7,7 @@ import { Player } from "../game/Player";
 import { gridToScreen } from "../game/iso";
 import { tintFor, skyColor } from "../game/time";
 import type { AssetMap } from "./assets";
-import { drawTerrainTile, drawCrop, drawBuilding, drawPlayer, drawTileHighlight } from "./sprites";
+import { drawTerrainTile, drawCrop, drawBuilding, drawPlayer, drawTileHighlight, drawTree, drawRock, drawChest } from "./sprites";
 
 export interface Highlight {
   col: number;
@@ -85,6 +85,17 @@ export class Renderer {
       const s = gridToScreen(c, r);
       if (tile.building) {
         entities.push({ depth: c + r, draw: () => drawBuilding(ctx, tile.building as string, s.x, s.y) });
+      }
+      if (tile.obj) {
+        const obj = tile.obj;
+        entities.push({
+          depth: c + r,
+          draw: () => {
+            if (obj.kind === "tree") drawTree(ctx, s.x, s.y, obj.variant);
+            else if (obj.kind === "rock") drawRock(ctx, s.x, s.y, obj.variant);
+            else drawChest(ctx, s.x, s.y);
+          },
+        });
       }
       if (tile.crop) {
         const crop = tile.crop;
