@@ -448,6 +448,22 @@ export function drawFurniture(
     blob(ctx, x, y - 24, 10);
     ctx.fillStyle = "#f6d65b";
     blob(ctx, x, y - 24, 6);
+  } else if (kind === "sign") {
+    ctx.fillStyle = "#8a5a3b";
+    ctx.fillRect(x - 2, y - 14, 4, 18);
+    ctx.strokeRect(x - 2, y - 14, 4, 18);
+    ctx.fillStyle = "#caa05a";
+    roundRect(ctx, x - 12, y - 26, 24, 14, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#7a4a2b";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 8, y - 22);
+    ctx.lineTo(x + 8, y - 22);
+    ctx.moveTo(x - 8, y - 18);
+    ctx.lineTo(x + 6, y - 18);
+    ctx.stroke();
   } else if (kind === "flower_pot") {
     ctx.fillStyle = "#c97b4a";
     ctx.beginPath();

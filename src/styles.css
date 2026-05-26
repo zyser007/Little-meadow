@@ -158,6 +158,36 @@ body {
   opacity: 0.96;
 }
 
+/* ---------- Dialogue box ---------- */
+#dialogue {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  width: min(92%, 460px);
+  background: var(--cream);
+  border: 4px solid var(--brown);
+  border-radius: 16px;
+  padding: 10px 14px 12px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  display: none;
+}
+#dialogue.show {
+  display: block;
+}
+#dialogue .dlg-name {
+  font-weight: 800;
+  color: var(--accent-d);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+#dialogue .dlg-text {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
 /* ---------- Panels ---------- */
 #panel-root {
   position: absolute;

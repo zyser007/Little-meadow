@@ -40,6 +40,12 @@ register({ id: "gold_bar", name: "Gold Bar", kind: "resource", sellPrice: 90, co
 register({ id: "cheese", name: "Cheese", kind: "resource", sellPrice: 85, color: "#f2c84a" });
 register({ id: "jam", name: "Jam", kind: "resource", sellPrice: 95, color: "#c8344f" });
 
+// Fish (caught with the rod at water).
+register({ id: "anchovy", name: "Anchovy", kind: "resource", sellPrice: 18, color: "#8fb8c8" });
+register({ id: "carp", name: "Carp", kind: "resource", sellPrice: 35, color: "#a7b86a" });
+register({ id: "salmon", name: "Salmon", kind: "resource", sellPrice: 70, color: "#e8896a" });
+register({ id: "seaweed", name: "Seaweed", kind: "resource", sellPrice: 4, color: "#5a8a5a" });
+
 export const ITEMS: Record<string, ItemDef> = registry;
 
 export function itemDef(id: string): ItemDef | undefined {

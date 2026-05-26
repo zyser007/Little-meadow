@@ -144,6 +144,21 @@ const craft = await page.evaluate(() => {
   return { found: true, loaded, finished, collected };
 });
 
+// fishing: cast at a water tile
+const fish = await page.evaluate(() => {
+  const { game, world, tryFish } = window.LM;
+  let w = null;
+  world.forEach((t, c, r) => {
+    if (!w && t.terrain === "water") w = [c, r];
+  });
+  if (!w) return { found: false };
+  const ids = ["anchovy", "carp", "salmon", "seaweed"];
+  const before = ids.reduce((s, id) => s + game.count(id), 0);
+  const res = tryFish(w[0], w[1]);
+  const after = ids.reduce((s, id) => s + game.count(id), 0);
+  return { found: true, ok: res.ok, gained: after - before };
+});
+
 await browser.close();
 
 const checks = [
@@ -171,6 +186,8 @@ const checks = [
   ["loaded furnace", craft.loaded === true],
   ["furnace finished overnight", craft.finished === true],
   ["collected crafted bar", craft.collected === true],
+  ["found water to fish", fish.found === true],
+  ["caught a fish", fish.ok === true && fish.gained === 1],
 ];
 
 let ok = true;

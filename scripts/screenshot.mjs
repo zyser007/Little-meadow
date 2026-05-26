@@ -96,5 +96,19 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await shot("09-craft");
 
+await page.evaluate(() => {
+  window.LM.closePanel();
+  window.LM.openMap();
+});
+await page.waitForTimeout(400);
+await shot("10-map");
+
+await page.evaluate(() => {
+  window.LM.closePanel();
+  window.LM.resolveTap(4, 4); // tap the signpost
+});
+await page.waitForTimeout(300);
+await shot("11-dialogue");
+
 await browser.close();
 console.log("done");

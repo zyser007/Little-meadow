@@ -18,7 +18,8 @@ export type ObjectKind =
   | "cheese_maker"
   | "jam_pot"
   | "lamp"
-  | "flower_pot";
+  | "flower_pot"
+  | "sign";
 
 export interface WorldObject {
   kind: ObjectKind;
@@ -118,6 +119,8 @@ export class World {
     this.setObject(2, 1, "chest", 0, 0);
     this.setObject(3, 1, "furnace", 0, 0);
     this.setObject(8, 1, "cheese_maker", 0, 0);
+    // a tip signpost at the edge of the starter field
+    this.setObject(4, 4, "sign", 0, 0);
 
     // Scatter trees and rocks on clear grass, away from the starter field.
     const trees: Array<[number, number]> = [

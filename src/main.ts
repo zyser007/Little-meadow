@@ -10,26 +10,28 @@ import { game } from "./game/GameState";
 import { loadGame, saveGame, clearSave } from "./game/save";
 import { MINUTES_PER_SECOND, WAKE_MINUTES, formatClock, phaseOf } from "./game/time";
 import { gridToScreen } from "./game/iso";
-import { Renderer, type Highlight, type AnimalRender } from "./render/Renderer";
+import { Renderer, type Highlight, type AnimalRender, type FloaterRender } from "./render/Renderer";
 import { loadAssets } from "./render/assets";
 import { InputManager } from "./input";
 import { tryTill, tryPlant, tryWater, tryHarvest, growCrops, stageLabel, type Result } from "./systems/farming";
 import { tryChop, tryMine } from "./systems/gathering";
 import { feedAnimal, collectAnimal, produceOvernight } from "./systems/animals";
 import { loadMachine, collectMachine, processMachines, isMachine } from "./systems/crafting";
+import { tryFish } from "./systems/fishing";
 import { CROP_BY_ID, CROP_BY_SEED, CROPS, matureStage } from "./data/crops";
 import { ENABLED_TOOLS, TOOL_BY_ID, type ToolId } from "./data/tools";
 import { buildingDef } from "./data/buildings";
 import { ANIMAL_BY_ID, HOUSE_CAPACITY, animalsForHouse, type AnimalHouse } from "./data/animals";
 import { FURNITURE_BY_ID, furnitureName } from "./data/furniture";
 import { HUD } from "./ui/hud";
-import { Toast } from "./ui/dialogue";
+import { Toast, DialogueBox } from "./ui/dialogue";
 import { ActionBar } from "./ui/actionbar";
 import { Bag } from "./ui/bag";
 import { Shop } from "./ui/shop";
 import { Storage } from "./ui/storage";
 import { AnimalPanel } from "./ui/animals";
 import { CraftPanel } from "./ui/craft";
+import { MapPanel } from "./ui/map";
 
 async function main(): Promise<void> {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -51,6 +53,22 @@ async function main(): Promise<void> {
   // ---- UI ----
   const hud = new HUD(ui);
   const toast = new Toast(ui);
+  const dialogue = new DialogueBox(ui);
+
+  // Reward pop-ups that rise and fade at the acted tile.
+  interface Floater {
+    x: number;
+    y: number;
+    text: string;
+    color: string;
+    born: number;
+  }
+  const floaters: Floater[] = [];
+  function popText(col: number, row: number, text: string, color = "#ffffff"): void {
+    const s = gridToScreen(col, row);
+    floaters.push({ x: s.x, y: s.y - 12, text, color, born: performance.now() });
+    if (floaters.length > 24) floaters.shift();
+  }
 
   const panelRoot = document.createElement("div");
   panelRoot.id = "panel-root";
@@ -169,9 +187,13 @@ async function main(): Promise<void> {
       shop.refresh();
       openPanel(shop.el);
     },
-    onMap: () => toast.show("Map — coming soon."),
+    onMap: () => {
+      mapPanel.render(world, player);
+      openPanel(mapPanel.el);
+    },
     onMenu: openMenu,
   });
+  const mapPanel = new MapPanel(closePanel);
 
   // ---- feedback / persistence helpers ----
   function save(): void {
@@ -185,6 +207,20 @@ async function main(): Promise<void> {
       save();
     }
   }
+
+  // act + a floating reward at the tapped tile
+  function tapAct(r: Result, col: number, row: number): void {
+    act(r);
+    if (r.ok && r.msg) popText(col, row, r.msg, "#fff7d6");
+  }
+
+  const SIGN_TIPS = [
+    "Welcome to Little Meadow! Till grass, plant seeds, water daily.",
+    "Tap your house to sleep — crops grow and animals produce overnight.",
+    "Feed animals at the coop & barn, then collect eggs, milk and wool.",
+    "Process raw goods at the furnace, cheese maker and jam pot for more gold.",
+    "Cast the fishing rod at the pond to catch fish to sell.",
+  ];
 
   function dotColor(): string {
     const p = phaseOf(game.timeMinutes);
@@ -326,13 +362,15 @@ async function main(): Promise<void> {
       if (kind === "chest") {
         openStorage();
       } else if (kind === "tree") {
-        if (game.selectedTool === "axe") act(tryChop(world, col, row));
+        if (game.selectedTool === "axe") tapAct(tryChop(world, col, row), col, row);
         else toast.show("Use the Axe to chop this tree.");
       } else if (kind === "rock") {
-        if (game.selectedTool === "pickaxe") act(tryMine(world, col, row));
+        if (game.selectedTool === "pickaxe") tapAct(tryMine(world, col, row), col, row);
         else toast.show("Use the Pickaxe to break this rock.");
       } else if (isMachine(kind)) {
         openCraft(t.obj);
+      } else if (kind === "sign") {
+        dialogue.show("Signpost", SIGN_TIPS[game.day % SIGN_TIPS.length]);
       } else {
         toast.show(furnitureName(kind));
       }
@@ -341,11 +379,17 @@ async function main(): Promise<void> {
     flash(col, row, "rgba(255,255,255,0.7)");
     const tool = game.selectedTool;
 
+    // Fishing: rod on a water tile.
+    if (tool === "fishing_rod" && t.terrain === "water") {
+      tapAct(tryFish(world, col, row), col, row);
+      return;
+    }
+
     // Harvest a mature crop regardless of tool.
     if (t.crop) {
       const cdef = CROP_BY_ID[t.crop.cropId];
       if (cdef && t.crop.stage >= matureStage(cdef)) {
-        act(tryHarvest(world, col, row));
+        tapAct(tryHarvest(world, col, row), col, row);
         return;
       }
     }
@@ -353,21 +397,21 @@ async function main(): Promise<void> {
     // Tool-specific actions.
     if (tool === "hoe") {
       if (!t.crop && t.terrain === "grass" && !t.tilled) {
-        act(tryTill(world, col, row));
+        tapAct(tryTill(world, col, row), col, row);
         return;
       }
     } else if (tool === "watering_can") {
       if (t.crop && !t.crop.watered) {
-        act(tryWater(world, col, row));
+        tapAct(tryWater(world, col, row), col, row);
         return;
       }
       if (t.tilled && !t.crop) {
-        act(tryWater(world, col, row));
+        tapAct(tryWater(world, col, row), col, row);
         return;
       }
     } else if (t.tilled && !t.crop && game.selectedSeed) {
       // hand + seed + empty soil = plant
-      act(tryPlant(world, col, row));
+      tapAct(tryPlant(world, col, row), col, row);
       return;
     }
 
@@ -467,8 +511,8 @@ async function main(): Promise<void> {
       "<b>Watering Can</b> waters. <b>Axe</b> chops trees for wood, <b>Pickaxe</b> breaks rocks for " +
       "stone &amp; ore. Tap the <b>chest</b> to store items, the <b>coop/barn</b> to feed animals, or a " +
       "<b>furnace/cheese maker/jam pot</b> to craft. Buy more from the Shop's <b>Build</b> tab and place " +
-      "them. Tap your <b>house</b> to sleep — crops grow, animals produce and machines finish overnight. " +
-      "<b>Sell</b> at the Shop. Long-press to clear a tile.";
+      "them. The <b>Fishing Rod</b> catches fish at the pond. Tap your <b>house</b> to sleep — crops grow, " +
+      "animals produce and machines finish overnight. <b>Sell</b> at the Shop. Long-press to clear a tile.";
 
     body.append(saveBtn, newBtn, hint);
     el.append(head, body);
@@ -496,7 +540,16 @@ async function main(): Promise<void> {
     game.timeMinutes += dt * MINUTES_PER_SECOND;
     player.update(dt);
     if (highlight && now > highlightUntil) highlight = null;
-    renderer.render(world, player, game.timeMinutes, highlight, now / 1000, computeAnimalRenders());
+    const rf: FloaterRender[] = [];
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const age = (now - floaters[i].born) / 1000;
+      if (age >= 1) {
+        floaters.splice(i, 1);
+        continue;
+      }
+      rf.push({ x: floaters[i].x, y: floaters[i].y - age * 26, text: floaters[i].text, color: floaters[i].color, alpha: 1 - age });
+    }
+    renderer.render(world, player, game.timeMinutes, highlight, now / 1000, computeAnimalRenders(), rf);
     hudAcc += dt;
     if (hudAcc > 0.2) {
       refreshHud();
@@ -539,6 +592,8 @@ async function main(): Promise<void> {
     });
     game.addItem("milk", 3);
     game.addItem("strawberry", 2);
+    game.addItem("carp", 2);
+    game.addItem("salmon", 1);
     // crafting machine states for the screenshot: furnace busy, cheese maker done
     world.forEach((t) => {
       if (!t.obj) return;
@@ -579,6 +634,11 @@ async function main(): Promise<void> {
     collectAnimal,
     loadMachine,
     collectMachine,
+    tryFish: (col: number, row: number) => tryFish(world, col, row),
+    openMap: () => {
+      mapPanel.render(world, player);
+      openPanel(mapPanel.el);
+    },
     openMachine: (kind: ObjectKind) => {
       let found: import("./game/World").WorldObject | null = null;
       world.forEach((t) => {

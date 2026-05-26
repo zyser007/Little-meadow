@@ -35,6 +35,14 @@ export interface AnimalRender {
   depth: number;
 }
 
+export interface FloaterRender {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  alpha: number;
+}
+
 interface Entity {
   depth: number;
   draw: () => void;
@@ -74,6 +82,7 @@ export class Renderer {
     highlight: Highlight | null,
     time: number,
     animals: AnimalRender[] = [],
+    floaters: FloaterRender[] = [],
   ): void {
     const { ctx } = this;
 
@@ -147,6 +156,25 @@ export class Renderer {
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       ctx.fillStyle = `rgba(${tint.r},${tint.g},${tint.b},${tint.a})`;
       ctx.fillRect(0, 0, this.viewW, this.viewH);
+    }
+
+    // reward floaters (screen space, on top)
+    if (floaters.length) {
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 13px system-ui, sans-serif";
+      for (const f of floaters) {
+        const sp = this.camera.worldToScreen(f.x, f.y);
+        ctx.globalAlpha = f.alpha;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.strokeText(f.text, sp.x, sp.y);
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, sp.x, sp.y);
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "left";
     }
   }
 }
