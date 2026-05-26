@@ -358,6 +358,135 @@ export function drawChest(ctx: CanvasRenderingContext2D, cx: number, cy: number)
   ctx.fill();
 }
 
+export function drawFurniture(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  kind: string,
+  processing: boolean,
+  done: boolean,
+): void {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + HH - 4, 15, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  ctx.lineWidth = 2;
+
+  if (kind === "furnace") {
+    ctx.fillStyle = "#6f7882";
+    ctx.fillRect(x + 4, y - 30, 7, 10);
+    ctx.strokeRect(x + 4, y - 30, 7, 10);
+    ctx.fillStyle = "#8a93a0";
+    roundRect(ctx, x - 14, y - 22, 28, 30, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 14, y - 12);
+    ctx.lineTo(x + 14, y - 12);
+    ctx.moveTo(x - 14, y - 2);
+    ctx.lineTo(x + 14, y - 2);
+    ctx.stroke();
+    ctx.fillStyle = processing ? "#ff9b3d" : "#3a2a22";
+    roundRect(ctx, x - 7, y - 6, 14, 10, 3);
+    ctx.fill();
+    if (processing) {
+      ctx.fillStyle = "#ffd86b";
+      roundRect(ctx, x - 4, y - 3, 8, 5, 2);
+      ctx.fill();
+    }
+  } else if (kind === "cheese_maker") {
+    ctx.fillStyle = "#b5824f";
+    roundRect(ctx, x - 12, y - 18, 24, 26, 5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#7a4a2b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 12, y - 10);
+    ctx.lineTo(x + 12, y - 10);
+    ctx.moveTo(x - 12, y + 2);
+    ctx.lineTo(x + 12, y + 2);
+    ctx.stroke();
+    ctx.fillStyle = "#cdb48a";
+    ctx.beginPath();
+    ctx.ellipse(x, y - 18, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#5e3a23";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + 12, y - 8, 4, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (kind === "jam_pot") {
+    ctx.fillStyle = "#5e4636";
+    ctx.beginPath();
+    ctx.ellipse(x, y - 4, 14, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#c8344f";
+    ctx.beginPath();
+    ctx.ellipse(x, y - 10, 11, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (processing) {
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      blob(ctx, x - 3, y - 11, 2);
+      blob(ctx, x + 4, y - 12, 1.6);
+    }
+    ctx.strokeStyle = "#3a2a22";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 10, 12, 5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (kind === "lamp") {
+    ctx.fillStyle = "#6f5a3a";
+    ctx.fillRect(x - 2, y - 20, 4, 28);
+    ctx.strokeRect(x - 2, y - 20, 4, 28);
+    ctx.fillStyle = "rgba(246,214,91,0.4)";
+    blob(ctx, x, y - 24, 10);
+    ctx.fillStyle = "#f6d65b";
+    blob(ctx, x, y - 24, 6);
+  } else if (kind === "flower_pot") {
+    ctx.fillStyle = "#c97b4a";
+    ctx.beginPath();
+    ctx.moveTo(x - 8, y - 2);
+    ctx.lineTo(x + 8, y - 2);
+    ctx.lineTo(x + 6, y + 8);
+    ctx.lineTo(x - 6, y + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#5bb148";
+    blob(ctx, x, y - 6, 4);
+    ctx.fillStyle = "#f2a6c0";
+    blob(ctx, x - 4, y - 9, 3);
+    blob(ctx, x + 4, y - 9, 3);
+    blob(ctx, x, y - 12, 3);
+  }
+
+  if (processing && kind === "cheese_maker") {
+    ctx.fillStyle = "rgba(180,180,180,0.5)";
+    blob(ctx, x, y - 26, 3);
+    blob(ctx, x + 4, y - 30, 2.5);
+  }
+
+  if (done) {
+    ctx.fillStyle = "#fff7d6";
+    ctx.strokeStyle = "#caa05a";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y - 30, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#5fae4e";
+    ctx.beginPath();
+    ctx.arc(x, y - 30, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 export function drawAnimal(
   ctx: CanvasRenderingContext2D,
   x: number,

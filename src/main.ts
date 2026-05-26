@@ -4,6 +4,7 @@
 import "./styles.css";
 import { Camera } from "./game/Camera";
 import { World } from "./game/World";
+import type { ObjectKind } from "./game/World";
 import { Player } from "./game/Player";
 import { game } from "./game/GameState";
 import { loadGame, saveGame, clearSave } from "./game/save";
@@ -15,10 +16,12 @@ import { InputManager } from "./input";
 import { tryTill, tryPlant, tryWater, tryHarvest, growCrops, stageLabel, type Result } from "./systems/farming";
 import { tryChop, tryMine } from "./systems/gathering";
 import { feedAnimal, collectAnimal, produceOvernight } from "./systems/animals";
+import { loadMachine, collectMachine, processMachines, isMachine } from "./systems/crafting";
 import { CROP_BY_ID, CROP_BY_SEED, CROPS, matureStage } from "./data/crops";
 import { ENABLED_TOOLS, TOOL_BY_ID, type ToolId } from "./data/tools";
 import { buildingDef } from "./data/buildings";
 import { ANIMAL_BY_ID, HOUSE_CAPACITY, animalsForHouse, type AnimalHouse } from "./data/animals";
+import { FURNITURE_BY_ID, furnitureName } from "./data/furniture";
 import { HUD } from "./ui/hud";
 import { Toast } from "./ui/dialogue";
 import { ActionBar } from "./ui/actionbar";
@@ -26,6 +29,7 @@ import { Bag } from "./ui/bag";
 import { Shop } from "./ui/shop";
 import { Storage } from "./ui/storage";
 import { AnimalPanel } from "./ui/animals";
+import { CraftPanel } from "./ui/craft";
 
 async function main(): Promise<void> {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -65,7 +69,12 @@ async function main(): Promise<void> {
   }
 
   const bag = new Bag(closePanel);
-  const shop = new Shop(closePanel, () => refreshHud(), (m) => toast.show(m));
+  const shop = new Shop(
+    closePanel,
+    () => refreshHud(),
+    (m) => toast.show(m),
+    (id) => enterPlacement(id),
+  );
   const storage = new Storage(closePanel, () => save());
   function openStorage(): void {
     storage.refresh();
@@ -124,6 +133,29 @@ async function main(): Promise<void> {
   function openAnimals(house: AnimalHouse): void {
     animalPanel.open(house);
     openPanel(animalPanel.el);
+  }
+
+  const craftPanel = new CraftPanel(closePanel, {
+    load: (obj, inputId) => act(loadMachine(obj, inputId)),
+    collect: (obj) => act(collectMachine(obj)),
+  });
+  function openCraft(obj: import("./game/World").WorldObject): void {
+    craftPanel.open(obj);
+    openPanel(craftPanel.el);
+  }
+
+  // Furniture placement mode: after buying, the next tap drops it on a clear grass tile.
+  let placing: { kind: ObjectKind; cost: number } | null = null;
+  function enterPlacement(id: string): void {
+    const def = FURNITURE_BY_ID[id];
+    if (!def) return;
+    if (game.gold < def.cost) {
+      toast.show("Not enough gold.");
+      return;
+    }
+    placing = { kind: def.id, cost: def.cost };
+    closePanel();
+    toast.show(`Tap a grassy spot to place the ${def.name}. Long-press to cancel.`);
   }
 
   const bar = new ActionBar(ui, {
@@ -265,20 +297,44 @@ async function main(): Promise<void> {
   function resolveTap(col: number, row: number): void {
     const t = world.at(col, row);
     if (!t) return;
+
+    // Placement mode: drop the bought furniture on a clear grass tile.
+    if (placing) {
+      flash(col, row, "rgba(255,255,255,0.7)");
+      if (t.terrain === "grass" && !t.building && !t.obj && !t.crop && !t.tilled) {
+        if (game.spendGold(placing.cost)) {
+          world.setObject(col, row, placing.kind, 0, (col + row) % 4);
+          toast.show(`Placed the ${furnitureName(placing.kind)}.`);
+          save();
+        } else {
+          toast.show("Not enough gold.");
+        }
+        placing = null;
+      } else {
+        toast.show("Can't build there — pick an empty grassy spot.");
+      }
+      return;
+    }
+
     if (t.building) {
       buildingAction(t.building);
       return;
     }
     if (t.obj) {
       flash(col, row, "rgba(255,255,255,0.7)");
-      if (t.obj.kind === "chest") {
+      const kind = t.obj.kind;
+      if (kind === "chest") {
         openStorage();
-      } else if (t.obj.kind === "tree") {
+      } else if (kind === "tree") {
         if (game.selectedTool === "axe") act(tryChop(world, col, row));
         else toast.show("Use the Axe to chop this tree.");
-      } else if (t.obj.kind === "rock") {
+      } else if (kind === "rock") {
         if (game.selectedTool === "pickaxe") act(tryMine(world, col, row));
         else toast.show("Use the Pickaxe to break this rock.");
+      } else if (isMachine(kind)) {
+        openCraft(t.obj);
+      } else {
+        toast.show(furnitureName(kind));
       }
       return;
     }
@@ -328,8 +384,13 @@ async function main(): Promise<void> {
   }
 
   function longPress(col: number, row: number): void {
+    if (placing) {
+      placing = null;
+      toast.show("Placement cancelled.");
+      return;
+    }
     const t = world.at(col, row);
-    if (!t || t.building) return;
+    if (!t || t.building || t.obj) return;
     flash(col, row, "rgba(216,74,58,0.85)");
     if (t.crop) {
       t.crop = null;
@@ -347,6 +408,7 @@ async function main(): Promise<void> {
   function sleep(): void {
     growCrops(world);
     produceOvernight();
+    processMachines(world);
     game.day += 1;
     game.timeMinutes = WAKE_MINUTES;
     save();
@@ -403,9 +465,10 @@ async function main(): Promise<void> {
     hint.innerHTML =
       "Tap the ground to walk. <b>Hoe</b> tills grass, pick a <b>Seed</b> then tap soil to plant, " +
       "<b>Watering Can</b> waters. <b>Axe</b> chops trees for wood, <b>Pickaxe</b> breaks rocks for " +
-      "stone &amp; ore. Tap the <b>chest</b> to store items, or the <b>coop/barn</b> to feed animals and " +
-      "collect eggs, milk &amp; wool. Tap your <b>house</b> to sleep — watered crops grow and fed animals " +
-      "produce overnight. Harvest, then <b>sell</b> at the Shop. Long-press to clear a tile.";
+      "stone &amp; ore. Tap the <b>chest</b> to store items, the <b>coop/barn</b> to feed animals, or a " +
+      "<b>furnace/cheese maker/jam pot</b> to craft. Buy more from the Shop's <b>Build</b> tab and place " +
+      "them. Tap your <b>house</b> to sleep — crops grow, animals produce and machines finish overnight. " +
+      "<b>Sell</b> at the Shop. Long-press to clear a tile.";
 
     body.append(saveBtn, newBtn, hint);
     el.append(head, body);
@@ -474,6 +537,22 @@ async function main(): Promise<void> {
       a.hasProduce = i % 2 === 0;
       a.fed = i % 2 === 1;
     });
+    game.addItem("milk", 3);
+    game.addItem("strawberry", 2);
+    // crafting machine states for the screenshot: furnace busy, cheese maker done
+    world.forEach((t) => {
+      if (!t.obj) return;
+      if (t.obj.kind === "furnace") {
+        t.obj.input = "iron";
+        t.obj.daysLeft = 1;
+        t.obj.output = null;
+      }
+      if (t.obj.kind === "cheese_maker") {
+        t.obj.input = null;
+        t.obj.daysLeft = 0;
+        t.obj.output = "cheese";
+      }
+    });
     updateBar();
     refreshHud();
     save();
@@ -498,6 +577,15 @@ async function main(): Promise<void> {
     openAnimals,
     feedAnimal,
     collectAnimal,
+    loadMachine,
+    collectMachine,
+    openMachine: (kind: ObjectKind) => {
+      let found: import("./game/World").WorldObject | null = null;
+      world.forEach((t) => {
+        if (!found && t.obj && t.obj.kind === kind) found = t.obj;
+      });
+      if (found) openCraft(found);
+    },
     openMenu,
     closePanel,
     demoSetup,

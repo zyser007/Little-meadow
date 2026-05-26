@@ -124,6 +124,26 @@ const animal = await page.evaluate(() => {
   return { fed, produced, collected };
 });
 
+// crafting loop: load furnace -> sleep -> collect bar
+const craft = await page.evaluate(() => {
+  const { game, world, sleep, loadMachine, collectMachine } = window.LM;
+  let furnace = null;
+  world.forEach((t) => {
+    if (!furnace && t.obj && t.obj.kind === "furnace") furnace = t.obj;
+  });
+  if (!furnace) return { found: false };
+  furnace.input = null;
+  furnace.daysLeft = 0;
+  furnace.output = null;
+  game.addItem("iron", 1);
+  const loaded = loadMachine(furnace, "iron").ok && furnace.input === "iron" && (furnace.daysLeft || 0) > 0;
+  sleep();
+  const finished = furnace.output === "iron_bar" && furnace.input === null;
+  const before = game.count("iron_bar");
+  const collected = collectMachine(furnace).ok && game.count("iron_bar") === before + 1 && !furnace.output;
+  return { found: true, loaded, finished, collected };
+});
+
 await browser.close();
 
 const checks = [
@@ -147,6 +167,10 @@ const checks = [
   ["fed an animal", animal.fed === true],
   ["animal produced overnight", animal.produced === true],
   ["collected animal produce", animal.collected === true],
+  ["machine persisted in save", craft.found === true],
+  ["loaded furnace", craft.loaded === true],
+  ["furnace finished overnight", craft.finished === true],
+  ["collected crafted bar", craft.collected === true],
 ];
 
 let ok = true;

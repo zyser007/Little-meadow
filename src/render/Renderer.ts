@@ -16,6 +16,7 @@ import {
   drawTree,
   drawRock,
   drawChest,
+  drawFurniture,
   drawAnimal,
 } from "./sprites";
 
@@ -119,7 +120,8 @@ export class Renderer {
           draw: () => {
             if (obj.kind === "tree") drawTree(ctx, s.x, s.y, obj.variant);
             else if (obj.kind === "rock") drawRock(ctx, s.x, s.y, obj.variant);
-            else drawChest(ctx, s.x, s.y);
+            else if (obj.kind === "chest") drawChest(ctx, s.x, s.y);
+            else drawFurniture(ctx, s.x, s.y, obj.kind, (obj.daysLeft ?? 0) > 0, !!obj.output);
           },
         });
       }

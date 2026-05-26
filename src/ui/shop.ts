@@ -3,16 +3,19 @@
 import { game } from "../game/GameState";
 import { CROPS } from "../data/crops";
 import { ITEMS } from "../data/items";
+import { FURNITURE } from "../data/furniture";
 
 export class Shop {
   el: HTMLElement;
   private body: HTMLElement;
   private onChange: () => void;
   private toast: (msg: string) => void;
+  private onBuild: (id: string) => void;
 
-  constructor(onClose: () => void, onChange: () => void, toast: (msg: string) => void) {
+  constructor(onClose: () => void, onChange: () => void, toast: (msg: string) => void, onBuild: (id: string) => void) {
     this.onChange = onChange;
     this.toast = toast;
+    this.onBuild = onBuild;
 
     this.el = document.createElement("div");
     this.el.className = "panel";
@@ -74,6 +77,20 @@ export class Shop {
         btn.addEventListener("click", () => this.sell(id, d.sellPrice, d.name));
         this.body.appendChild(this.makeRow(d.color, d.name, `x${game.count(id)}`, btn));
       }
+    }
+
+    // Build / furniture (buy then place on the farm)
+    const buildLab = document.createElement("div");
+    buildLab.className = "section-label";
+    buildLab.textContent = "Build";
+    this.body.appendChild(buildLab);
+    for (const f of FURNITURE) {
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = `${f.cost}G`;
+      btn.disabled = game.gold < f.cost;
+      btn.addEventListener("click", () => this.onBuild(f.id));
+      this.body.appendChild(this.makeRow(f.color, f.name, "", btn));
     }
   }
 

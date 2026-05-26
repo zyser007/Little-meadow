@@ -10,12 +10,23 @@ export interface Crop {
   watered: boolean;
 }
 
-export type ObjectKind = "tree" | "rock" | "chest";
+export type ObjectKind =
+  | "tree"
+  | "rock"
+  | "chest"
+  | "furnace"
+  | "cheese_maker"
+  | "jam_pot"
+  | "lamp"
+  | "flower_pot";
 
 export interface WorldObject {
   kind: ObjectKind;
-  hp: number; // remaining hits for resource nodes (ignored by chest)
+  hp: number; // remaining hits for resource nodes (ignored by others)
   variant: number; // cosmetic seed (e.g. tree colour)
+  input?: string | null; // crafting machine: item being processed
+  daysLeft?: number; // crafting machine: days until output is ready
+  output?: string | null; // crafting machine: finished item awaiting collection
 }
 
 export interface Tile {
@@ -103,8 +114,10 @@ export class World {
     this.setBuilding(6, 1, "barn");
     this.setBuilding(9, 1, "shop");
 
-    // A storage chest beside the home.
+    // A storage chest + a starter furnace and cheese maker beside the home.
     this.setObject(2, 1, "chest", 0, 0);
+    this.setObject(3, 1, "furnace", 0, 0);
+    this.setObject(8, 1, "cheese_maker", 0, 0);
 
     // Scatter trees and rocks on clear grass, away from the starter field.
     const trees: Array<[number, number]> = [
@@ -175,7 +188,9 @@ export class World {
       d: t.tilled ? 1 : 0,
       c: t.crop ? [t.crop.cropId, t.crop.stage, t.crop.watered ? 1 : 0] : null,
       b: t.building,
-      o: t.obj ? [t.obj.kind, t.obj.hp, t.obj.variant] : null,
+      o: t.obj
+        ? [t.obj.kind, t.obj.hp, t.obj.variant, t.obj.input ?? null, t.obj.daysLeft ?? 0, t.obj.output ?? null]
+        : null,
       v: t.variant,
     }));
   }
@@ -189,7 +204,16 @@ export class World {
         tilled: s.d === 1,
         crop: s.c ? { cropId: s.c[0], stage: s.c[1], watered: s.c[2] === 1 } : null,
         building: s.b,
-        obj: s.o ? { kind: s.o[0], hp: s.o[1], variant: s.o[2] } : null,
+        obj: s.o
+          ? {
+              kind: s.o[0],
+              hp: s.o[1],
+              variant: s.o[2],
+              input: s.o[3] ?? null,
+              daysLeft: s.o[4] ?? 0,
+              output: s.o[5] ?? null,
+            }
+          : null,
         variant: s.v,
       };
     }
@@ -201,6 +225,6 @@ export interface SerializedTile {
   d: number;
   c: [string, number, number] | null;
   b: string | null;
-  o: [ObjectKind, number, number] | null;
+  o: [ObjectKind, number, number, string | null, number, string | null] | null;
   v: number;
 }

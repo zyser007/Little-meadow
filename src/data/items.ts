@@ -34,6 +34,12 @@ register({ id: "milk", name: "Milk", kind: "resource", sellPrice: 30, color: "#f
 register({ id: "egg", name: "Egg", kind: "resource", sellPrice: 14, color: "#f6e7b8" });
 register({ id: "wool", name: "Wool", kind: "resource", sellPrice: 22, color: "#efe9df" });
 
+// Crafted goods (furnace / cheese maker / jam pot) — higher value than their inputs.
+register({ id: "iron_bar", name: "Iron Bar", kind: "resource", sellPrice: 35, color: "#c2cbd3" });
+register({ id: "gold_bar", name: "Gold Bar", kind: "resource", sellPrice: 90, color: "#f0cf5a" });
+register({ id: "cheese", name: "Cheese", kind: "resource", sellPrice: 85, color: "#f2c84a" });
+register({ id: "jam", name: "Jam", kind: "resource", sellPrice: 95, color: "#c8344f" });
+
 export const ITEMS: Record<string, ItemDef> = registry;
 
 export function itemDef(id: string): ItemDef | undefined {

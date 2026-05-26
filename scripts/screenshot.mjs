@@ -81,5 +81,20 @@ await page.evaluate(() => {
 await page.waitForTimeout(400);
 await shot("08-coop");
 
+await page.evaluate(() => {
+  const { world } = window.LM;
+  world.forEach((t) => {
+    if (t.obj && t.obj.kind === "furnace") {
+      t.obj.input = null;
+      t.obj.daysLeft = 0;
+      t.obj.output = null;
+    }
+  });
+  window.LM.closePanel();
+  window.LM.openMachine("furnace");
+});
+await page.waitForTimeout(400);
+await shot("09-craft");
+
 await browser.close();
 console.log("done");
